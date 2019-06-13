@@ -284,7 +284,7 @@
                  (tock-lava (game-lava g))
                  (tock-gameover (game-gameover g))
                  (tock-retry g))
-      (make-game (tock-spider (game-spider g))
+      (make-game (tock-spider g)
                  (tock-webs g)
                  (tock-flies g)
                  (tock-lives g)
@@ -294,23 +294,26 @@
                  (tock-lava (game-lava g))
                  false false)))
 
-;; Spider -> Spider
+;; Game -> Spider
 ;; produce the next spider
+#;
 (check-expect (tock-spider S0)
               (make-spider X-POS Y-SPEED ROT-SPEED))
+#;
 (check-expect (tock-spider S1)
               (make-spider X-POS (+ 10 Y-SPEED) (* ROT-SPEED -1)))
+#;
 (check-expect (tock-spider S4)
               (make-spider X-POS 0 ROT-SPEED))
-(define (tock-spider s)
-  (cond [(>= (spider-y s) HEIGHT)
-         (make-spider (spider-x s)
+(define (tock-spider g)
+  (cond [(>= (spider-y (game-spider g)) HEIGHT)
+         (make-spider (spider-x (game-spider g))
                       0
-                      (rotate-spider (spider-rot s)))]
+                      (rotate-spider (spider-rot (game-spider g))))]
         [else
-         (make-spider (spider-x s)
-                      (+ (spider-y s) Y-SPEED)
-                      (rotate-spider (spider-rot s)))]))
+         (make-spider (spider-x (game-spider g))
+                      (+ (spider-y (game-spider g)) (+ Y-SPEED (game-level g)))
+                      (rotate-spider (spider-rot (game-spider g))))]))
 
 ;; Number[-360,360] -> Number[-360,360]
 ;; rotate spider
@@ -324,10 +327,13 @@
 
 ;; Game -> ListOfWeb
 ;; produce the next list of webs
+#;
 (check-expect (tock-webs G0)
               (list (make-web X-POS Y-SPEED Y-SPEED)))
+#;
 (check-expect (tock-webs G1)
               (list (make-web X-POS (+ 10 Y-SPEED) (+ 10 Y-SPEED))))
+#;
 (check-expect (tock-webs G4)
               (list (make-web X-POS 0 0)))
 (define (tock-webs g)
@@ -337,8 +343,8 @@
         [else
          (local [(define (tock-web w)
                    (make-web (web-x w)
-                             (+ (web-y w) Y-SPEED)
-                             (+ (web-length w) Y-SPEED)))]
+                             (+ (web-y w) (+ Y-SPEED (game-level g)))
+                             (+ (web-length w) (+ Y-SPEED (game-level g)))))]
            (cons (tock-web (first (game-webs g)))
                  (rest (game-webs g))))]))
 
@@ -848,10 +854,10 @@
                          3 0 0 LOFB0 L0
                          false false))
 (check-expect (handle-key G0 "left")
-              (make-game (make-spider (- X-POS X-SPEED)
+              (make-game (make-spider (- X-POS (+ X-SPEED (game-level G0)))
                                       (spider-y (game-spider G0))
                                       (spider-rot (game-spider G0)))
-                         (cons (make-web (- X-POS X-SPEED)
+                         (cons (make-web (- X-POS (+ X-SPEED (game-level G0)))
                                          (spider-y (game-spider G0))
                                          0)
                                (game-webs G0))
@@ -859,10 +865,10 @@
                          3 0 0 LOFB0 L0
                          false false))
 (check-expect (handle-key G0 "right")
-              (make-game (make-spider (+ X-POS X-SPEED)
+              (make-game (make-spider (+ X-POS (+ X-SPEED (game-level G0)))
                                       (spider-y (game-spider G0))
                                       (spider-rot (game-spider G0)))
-                         (cons (make-web (+ X-POS X-SPEED)
+                         (cons (make-web (+ X-POS (+ X-SPEED (game-level G0)))
                                          (spider-y (game-spider G0))
                                          0)
                                (game-webs G0))
@@ -929,10 +935,10 @@
                     (game-gameover g)
                     (game-retry g))]
         [(key=? ke "left")
-         (make-game (make-spider (modulo (- (spider-x (game-spider g)) X-SPEED) WIDTH)
+         (make-game (make-spider (modulo (- (spider-x (game-spider g)) (+ X-SPEED (game-level g))) WIDTH)
                                  (spider-y (game-spider g))
                                  (spider-rot (game-spider g)))
-                    (cons (make-web (modulo (- (spider-x (game-spider g)) X-SPEED) WIDTH)
+                    (cons (make-web (modulo (- (spider-x (game-spider g)) (+ X-SPEED (game-level g))) WIDTH)
                                     (spider-y (game-spider g))
                                     0)
                           (game-webs g))
@@ -945,10 +951,10 @@
                     (game-gameover g)
                     (game-retry g))]
         [(key=? ke "right")
-         (make-game (make-spider (modulo (+ (spider-x (game-spider g)) X-SPEED) WIDTH)
+         (make-game (make-spider (modulo (+ (spider-x (game-spider g)) (+ X-SPEED (game-level g))) WIDTH)
                                  (spider-y (game-spider g))
                                  (spider-rot (game-spider g)))
-                    (cons (make-web (modulo (+ (spider-x (game-spider g)) X-SPEED) WIDTH)
+                    (cons (make-web (modulo (+ (spider-x (game-spider g)) (+ X-SPEED (game-level g))) WIDTH)
                                     (spider-y (game-spider g))
                                     0)
                           (game-webs g))
