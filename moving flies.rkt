@@ -53,6 +53,12 @@
                                      (circle 12 "solid" "tomato")
                                      (circle 14 "solid" "red"))))
 
+(define EXTRA-LIFE-BALL (scale 0.8 (overlay (circle 3 "solid" "white")
+                                            (circle 5 "solid" "pink")
+                                            (circle 7 "solid" "lightcoral")
+                                            (circle 10 "solid" "deeppink")
+                                            (circle 12 "solid" "crimson")
+                                            (circle 14 "solid" "pink"))))
 
 (define LAVA-TOP (local [(define sub (overlay (triangle 14 "solid" "orange red")
                                               (triangle 14 "outline" "red")))]
@@ -97,6 +103,13 @@
                         (rectangle 10 0 "solid" "gray")
                         SPIDER-LIFE))
 (define 1-LIVES SPIDER-LIFE)
+
+(define EXTRA-LIFE (scale 0.8 (overlay (circle 3 "solid" "white")
+                                       (circle 5 "solid" "pink")
+                                       (circle 7 "solid" "lightcoral")
+                                       (circle 10 "solid" "deeppink")
+                                       (circle 12 "solid" "crimson")
+                                       (circle 14 "solid" "pink"))))
 
 (define TEXT-SIZE 20)
 (define TEXT-COLOUR "black")
@@ -224,20 +237,28 @@
          (... (fn-for-fireball (first lofb))
               (fn-for-lofb (rest lofb)))]))
 
-(define-struct game (spider webs flies lives level score fireballs lava gameover retry))
-;; Game is (make-game Spider ListOfWeb ListOfFly Natural[0,3] Natural Natural ListOfFireball Number (false or Number) Boolean)
-;; interp. spider, its strands of web, flies on the screen, remaining lives, current level, user score, fireballs on screen, flowing lava,
-;;         placing of gameover sign, whether retry button is there or not
+(define-struct extra-life-ball (x y))
+;; ExtraLifeBall is (make-extra-life-ball Number[0,WIDTH] Number[0,HEIGHT])
+;; interp. an extra life ball's x- and y- position
+#;
+(define (fn-for-extra-life-ball b)
+  (... (extra-life-ball-x b)
+       (extra-life-ball-y b)))
+
+(define-struct game (spider webs flies lives level score fireballs extra-life-ball lava gameover retry))
+;; Game is (make-game Spider ListOfWeb ListOfFly Natural[0,3] Natural Natural ListOfFireball (false or ExtraLifeBall) Number (false or Number) Boolean)
+;; interp. spider, its strands of web, flies on the screen, remaining lives, current level, user score, fireballs on screen,
+;;         optional extra life ball, flowing lava, placing of gameover sign, whether retry button is there or not
 (define L0 0)
-(define G0 (make-game S0 LOW0 LOF0 3 0 0 LOFB0 L0 false false))
-(define G1 (make-game S1 LOW1 LOF1 2 0 0 LOFB0 L0 false false))
-(define G2 (make-game S2 LOW1 (list (make-fly (+ X-POS 5) (- (/ HEIGHT 2) 2) 0 0)) 3 0 0 LOFB0 L0 false false))
-(define G3 (make-game S2 LOW1 (list F1 (make-fly (+ X-POS 5) (- (/ HEIGHT 2) 2) 0 0)) 3 0 0 LOFB0 L0 false false))
-(define G4 (make-game S2 (list W4) LOF1 3 0 0 LOFB0 L0 false false))
-(define G5 (make-game S0 LOW0 LOF0 3 0 0 LOFB2 L0 false false))
-(define G7 (make-game S0 LOW0 LOF0 3 0 0 LOFB3 L0 false false))
-(define G8 (make-game S1 LOW1 LOF1 2 0 0 LOFB3 L0 false false))
-(define G10 (make-game S0 LOW0 LOF10 3 0 0 LOFB0 L0 false false))
+(define G0 (make-game S0 LOW0 LOF0 3 0 0 LOFB0 false L0 false false))
+(define G1 (make-game S1 LOW1 LOF1 2 0 0 LOFB0 false L0 false false))
+(define G2 (make-game S2 LOW1 (list (make-fly (+ X-POS 5) (- (/ HEIGHT 2) 2) 0 0)) 3 0 0 LOFB0 false L0 false false))
+(define G3 (make-game S2 LOW1 (list F1 (make-fly (+ X-POS 5) (- (/ HEIGHT 2) 2) 0 0)) 3 0 0 LOFB0 false L0 false false))
+(define G4 (make-game S2 (list W4) LOF1 3 0 0 LOFB0 false L0 false false))
+(define G5 (make-game S0 LOW0 LOF0 3 0 0 LOFB2 false L0 false false))
+(define G7 (make-game S0 LOW0 LOF0 3 0 0 LOFB3 false L0 false false))
+(define G8 (make-game S1 LOW1 LOF1 2 0 0 LOFB3 false L0 false false))
+(define G10 (make-game S0 LOW0 LOF10 3 0 0 LOFB0 false L0 false false))
 #;
 (define (fn-for-game g)
   (... (fn-for-spider (game-spider g))
@@ -246,6 +267,8 @@
        (game-lives g)
        (game-level g)
        (game-score g)
+       (fn-for-lofb (game-fireballs g))
+       (fn-for-extra-life-ball (game-extra-life-ball g))
        (game-lava g)
        (game-gameover g)
        (game-retry g)))
@@ -259,10 +282,10 @@
 ;; 
 (define (main g)
   (big-bang g                                         ; Game
-            (on-tick       tock)                      ; Game -> Game
-            (to-draw       render)                    ; Game -> Image
-            (on-mouse      handle-mouse)              ; Game Integer Integer MouseEvent -> Game
-            (on-key        handle-key)))              ; Game KeyEvent -> Game
+    (on-tick       tock)                      ; Game -> Game
+    (to-draw       render)                    ; Game -> Image
+    (on-mouse      handle-mouse)              ; Game Integer Integer MouseEvent -> Game
+    (on-key        handle-key)))              ; Game KeyEvent -> Game
 ;           (stop-with     esc-pressed?)              ; Game -> Boolean
 
 ;; Game -> Game
@@ -270,7 +293,7 @@
 (check-expect (tock G8) (make-game (make-spider X-POS (+ 10 Y-SPEED) (* ROT-SPEED -1))
                                    (list (make-web X-POS (+ 10 Y-SPEED) (+ 10 Y-SPEED)))
                                    (map move-fly LOF1)
-                                   2 0 0 (tock-fireballs G8) (tock-lava (game-lava G8))
+                                   2 0 0 (tock-fireballs G8) false (tock-lava (game-lava G8))
                                    false false))
 (define (tock g)
   (if (gameover? g)
@@ -281,18 +304,21 @@
                  (game-level g)
                  (game-score g)
                  (tock-fireballs g)
+                 (tock-extra-life-ball g (game-score g))
                  (tock-lava (game-lava g))
                  (tock-gameover (game-gameover g))
                  (tock-retry g))
-      (make-game (tock-spider g)
-                 (tock-webs g)
-                 (tock-flies g)
-                 (tock-lives g)
-                 (tock-level g)
-                 (tock-score g)
-                 (tock-fireballs g)
-                 (tock-lava (game-lava g))
-                 false false)))
+      (local [(define new-score (tock-score g))]
+        (make-game (tock-spider g)
+                   (tock-webs g)
+                   (tock-flies g)
+                   (tock-lives g)
+                   (tock-level g)
+                   new-score
+                   (tock-fireballs g)
+                   (tock-extra-life-ball g new-score)
+                   (tock-lava (game-lava g))
+                   false false))))
 
 ;; Game -> Spider
 ;; produce the next spider
@@ -397,18 +423,23 @@
 ;; Game -> Natural[0,4]
 ;; produce number of lives remaining
 (define (tock-lives g)
-  (local [(define (hit? fb)
+  (local [(define (hit? ballx bally)
             (and
              (<= (- (spider-x (game-spider g)) 19)
-                 (fireball-x fb)
+                 ballx
                  (+ (spider-x (game-spider g)) 19))
              (<= (- (spider-y (game-spider g)) 19)
-                 (fireball-y fb)
-                 (+ (spider-y (game-spider g)) 19))))]
+                 bally
+                 (+ (spider-y (game-spider g)) 19))))
+          (define (hit-fireball? fb) (hit? (fireball-x fb) (fireball-y fb)))
+          (define (hit-extra-life-ball? b) (hit? (extra-life-ball-x b) (extra-life-ball-y b)))]
     (cond [(>= (spider-y (game-spider g)) HEIGHT)
            (sub1 (game-lives g))]
-          [(ormap hit? (game-fireballs g))
+          [(ormap hit-fireball? (game-fireballs g))
            (sub1 (game-lives g))]
+          [(and (not (false? (game-extra-life-ball g)))
+                (hit-extra-life-ball? (game-extra-life-ball g)))
+           (add1 (game-lives g))]
           [else (game-lives g)])))
 
 ;; Game -> Natural
@@ -477,6 +508,31 @@
                  (+ (spider-y (game-spider g)) 19))))]
     (map movefb (filter inscreen? (filter unhit? (game-fireballs g))))))
 
+;; Game -> Number -> ExtraLifeBall
+;; move extra life ball (if it exists) unless at left edge already, or create extra life ball if user has reached new level (every 1000 points)
+(define (tock-extra-life-ball g new-score)
+  (local [(define hit-new-level?
+            (= (add1 (floor (/ (game-score g) 1000)))
+               (floor (/ new-score 1000))))]
+    (if (false? (game-extra-life-ball g))
+        (if hit-new-level?
+            (make-extra-life-ball WIDTH (random HEIGHT))
+            false)
+        (local [(define new-x (- (extra-life-ball-x (game-extra-life-ball g))
+                                 (+ FIREBALL-SPEED (game-level g))))
+                (define (hit? ball)
+                  (and
+                   (<= (- (spider-x (game-spider g)) 19)
+                       (extra-life-ball-x ball)
+                       (+ (spider-x (game-spider g)) 19))
+                   (<= (- (spider-y (game-spider g)) 19)
+                       (extra-life-ball-y ball)
+                       (+ (spider-y (game-spider g)) 19))))]
+          (if (or (<= new-x 0) (hit? (game-extra-life-ball g)))
+              false
+              (make-extra-life-ball new-x
+                                    (extra-life-ball-y (game-extra-life-ball g))))))))
+
 
 ;; Number -> Number
 ;; move lava right
@@ -498,9 +554,9 @@
 ;; Game -> Boolean
 ;; see if retry sign should be placed on screen
 (check-expect (tock-retry G0) false)
-(check-expect (tock-retry (make-game S1 LOW1 LOF0 0 0 300 LOFB0 L0 400 false)) false)
-(check-expect (tock-retry (make-game S1 LOW1 LOF0 0 0 300 LOFB0 L0 200 false)) true)
-(check-expect (tock-retry (make-game S1 LOW1 LOF0 0 0 300 LOFB0 L0 600 false)) false)
+(check-expect (tock-retry (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 400 false)) false)
+(check-expect (tock-retry (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 200 false)) true)
+(check-expect (tock-retry (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 600 false)) false)
 (define (tock-retry g)
   (if (and (gameover? g) (not (false? (game-gameover g))))
       (<= (game-gameover g) 224)
@@ -580,8 +636,9 @@
                                                       (render-level (game-level g)
                                                                     (render-score (game-score g)
                                                                                   (render-fireballs (game-fireballs g)
-                                                                                                    (render-flies (game-flies g)
-                                                                                                                  (render-lava (game-lava g))))))))))]
+                                                                                                    (render-extra-life-ball (game-extra-life-ball g)
+                                                                                                                            (render-flies (game-flies g)
+                                                                                                                                          (render-lava (game-lava g)))))))))))]
     (if (gameover? g)
         (if (false? (game-gameover g))
             (place-image GAMEOVER
@@ -689,32 +746,26 @@
                                      80 5
                                      1-LIVES))
 (define (render-lives l i)
-  (cond [(= l 5)
-         (underlay/align/offset "left" "top"
-                                i
-                                80 5
-                                5-LIVES)]
-        [(= l 4)
-         (underlay/align/offset "left" "top"
-                                i
-                                80 5
-                                4-LIVES)]
-        [(= l 3)
-         (underlay/align/offset "left" "top"
-                                i
-                                80 5
-                                3-LIVES)]
-        [(= l 2)
-         (underlay/align/offset "left" "top"
-                                i
-                                80 5
-                                2-LIVES)]
-        [(= l 1)
-         (underlay/align/offset "left" "top"
-                                i
-                                80 5
-                                1-LIVES)]
-        [(= l 0) i]))
+  (local [(define (render-lives-image-onto-image lives-image)
+            (underlay/align/offset "left" "top"
+                                   i
+                                   80 5
+                                   lives-image))]
+    (cond [(> l 5)
+           (render-lives-image-onto-image (beside SPIDER-LIFE
+                                                  (rectangle 5 0 "solid" "gray")
+                                                  (txt-to-image (string-append "X " (number->string l)))))]
+          [(= l 5)
+           (render-lives-image-onto-image 5-LIVES)]
+          [(= l 4)
+           (render-lives-image-onto-image 4-LIVES)]
+          [(= l 3)
+           (render-lives-image-onto-image 3-LIVES)]
+          [(= l 2)
+           (render-lives-image-onto-image 2-LIVES)]
+          [(= l 1)
+           (render-lives-image-onto-image 1-LIVES)]
+          [(= l 0) i])))
 
 ;; Natural Image -> Image
 ;; render image of current level onto image
@@ -769,6 +820,14 @@
            (render-fb (first lofb)
                       (render-fireballs (rest lofb) i)))]))
 
+;; (false or ExtraLifeBall) Image -> Image
+(define (render-extra-life-ball b i)
+  (if (false? b)
+      i
+      (place-image EXTRA-LIFE-BALL
+                   (extra-life-ball-x b)
+                   (extra-life-ball-y b)
+                   i)))
 
 ;; Fly Image -> Image
 ;; render image of fly onto image
@@ -851,7 +910,7 @@
                                       (spider-rot (game-spider G0)))
                          (list (make-web X-POS 0 0))
                          (game-flies G0)
-                         3 0 0 LOFB0 L0
+                         3 0 0 LOFB0 false L0
                          false false))
 (check-expect (handle-key G0 "left")
               (make-game (make-spider (- X-POS (+ X-SPEED (game-level G0)))
@@ -862,7 +921,7 @@
                                          0)
                                (game-webs G0))
                          (game-flies G0)
-                         3 0 0 LOFB0 L0
+                         3 0 0 LOFB0 false L0
                          false false))
 (check-expect (handle-key G0 "right")
               (make-game (make-spider (+ X-POS (+ X-SPEED (game-level G0)))
@@ -873,7 +932,7 @@
                                          0)
                                (game-webs G0))
                          (game-flies G0)
-                         3 0 0 LOFB0 L0
+                         3 0 0 LOFB0 false L0
                          false false))
 ;(define (handle-key g ke) g)   ;stub
 
@@ -890,6 +949,7 @@
                     0
                     0
                     (game-fireballs g)
+                    false
                     (game-lava g)
                     false
                     false)]
@@ -903,6 +963,7 @@
                     (game-level g)
                     (game-score g)
                     (game-fireballs g)
+                    (game-extra-life-ball g)
                     (game-lava g)
                     (game-gameover g)
                     (game-retry g))]
@@ -916,6 +977,7 @@
                     (game-level g)
                     (game-score g)
                     (game-fireballs g)
+                    (game-extra-life-ball g)
                     (game-lava g)
                     (game-gameover g)
                     (game-retry g))]
@@ -931,6 +993,7 @@
                     (game-level g)
                     (game-score g)
                     (game-fireballs g)
+                    (game-extra-life-ball g)
                     (game-lava g)
                     (game-gameover g)
                     (game-retry g))]
@@ -947,6 +1010,7 @@
                     (game-level g)
                     (game-score g)
                     (game-fireballs g)
+                    (game-extra-life-ball g)
                     (game-lava g)
                     (game-gameover g)
                     (game-retry g))]
@@ -963,6 +1027,7 @@
                     (game-level g)
                     (game-score g)
                     (game-fireballs g)
+                    (game-extra-life-ball g)
                     (game-lava g)
                     (game-gameover g)
                     (game-retry g))]
@@ -974,14 +1039,14 @@
 (check-expect (handle-mouse G10 240 375 "button-down") G10)
 (check-expect (handle-mouse G10 200 300 "button-down") G10)
 (check-expect (handle-mouse G10 240 375 "drag") G10)
-(check-expect (handle-mouse (make-game S1 LOW1 LOF0 0 0 300 LOFB0 L0 300 false) 240 375 "button-down")
-              (make-game S1 LOW1 LOF0 0 0 300 LOFB0 L0 300 false))
-(check-expect (handle-mouse (make-game S1 LOW1 LOF0 0 0 300 LOFB0 L0 200 false) 240 375 "button-down")
-              (make-game S1 LOW1 LOF0 0 0 300 LOFB0 L0 200 false))
-(check-expect (handle-mouse (make-game S1 LOW1 LOF0 0 0 300 LOFB0 L0 200 true) 200 300 "button-down")
-              (make-game S1 LOW1 LOF0 0 0 300 LOFB0 L0 200 true))
-(check-expect (handle-mouse (make-game S1 LOW1 LOF0 0 0 300 LOFB0 L0 200 true) 240 375 "button-down")
-              (make-game (make-spider 250 0 10) LOW0 LOF0 3 0 0 LOFB0 L0 false false))
+(check-expect (handle-mouse (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 300 false) 240 375 "button-down")
+              (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 300 false))
+(check-expect (handle-mouse (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 200 false) 240 375 "button-down")
+              (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 200 false))
+(check-expect (handle-mouse (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 200 true) 200 300 "button-down")
+              (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 200 true))
+(check-expect (handle-mouse (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 200 true) 240 375 "button-down")
+              (make-game (make-spider 250 0 10) LOW0 LOF0 3 0 0 LOFB0 false L0 false false))
 ;(define (handle-mouse g x y me) g)   ;stub
 
 (define (handle-mouse g x y me)
@@ -999,6 +1064,7 @@
                     0
                     0
                     (game-fireballs g)
+                    false
                     (game-lava g)
                     false
                     false)]
@@ -1013,7 +1079,7 @@
   (text s TEXT-SIZE TEXT-COLOUR))
 
 ;; Game -> Boolean
-(define G6 (make-game S1 LOW1 LOF0 0 0 300 LOFB0 L0 false false))
+(define G6 (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 false false))
 (check-expect (gameover? G0) false)
 (check-expect (gameover? G1) false)
 (check-expect (gameover? G6) true)
