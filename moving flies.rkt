@@ -245,20 +245,20 @@
   (... (extra-life-ball-x b)
        (extra-life-ball-y b)))
 
-(define-struct game (spider webs flies lives level score fireballs extra-life-ball lava gameover retry))
-;; Game is (make-game Spider ListOfWeb ListOfFly Natural[0,3] Natural Natural ListOfFireball (false or ExtraLifeBall) Number (false or Number) Boolean)
+(define-struct game (spider webs flies lives level score fireballs extra-life-ball lava gameover retry paused))
+;; Game is (make-game Spider ListOfWeb ListOfFly Natural[0,3] Natural Natural ListOfFireball (false or ExtraLifeBall) Number (false or Number) Boolean Boolean)
 ;; interp. spider, its strands of web, flies on the screen, remaining lives, current level, user score, fireballs on screen,
 ;;         optional extra life ball, flowing lava, placing of gameover sign, whether retry button is there or not
 (define L0 0)
-(define G0 (make-game S0 LOW0 LOF0 3 0 0 LOFB0 false L0 false false))
-(define G1 (make-game S1 LOW1 LOF1 2 0 0 LOFB0 false L0 false false))
-(define G2 (make-game S2 LOW1 (list (make-fly (+ X-POS 5) (- (/ HEIGHT 2) 2) 0 0)) 3 0 0 LOFB0 false L0 false false))
-(define G3 (make-game S2 LOW1 (list F1 (make-fly (+ X-POS 5) (- (/ HEIGHT 2) 2) 0 0)) 3 0 0 LOFB0 false L0 false false))
-(define G4 (make-game S2 (list W4) LOF1 3 0 0 LOFB0 false L0 false false))
-(define G5 (make-game S0 LOW0 LOF0 3 0 0 LOFB2 false L0 false false))
-(define G7 (make-game S0 LOW0 LOF0 3 0 0 LOFB3 false L0 false false))
-(define G8 (make-game S1 LOW1 LOF1 2 0 0 LOFB3 false L0 false false))
-(define G10 (make-game S0 LOW0 LOF10 3 0 0 LOFB0 false L0 false false))
+(define G0 (make-game S0 LOW0 LOF0 3 0 0 LOFB0 false L0 false false false))
+(define G1 (make-game S1 LOW1 LOF1 2 0 0 LOFB0 false L0 false false false))
+(define G2 (make-game S2 LOW1 (list (make-fly (+ X-POS 5) (- (/ HEIGHT 2) 2) 0 0)) 3 0 0 LOFB0 false L0 false false false))
+(define G3 (make-game S2 LOW1 (list F1 (make-fly (+ X-POS 5) (- (/ HEIGHT 2) 2) 0 0)) 3 0 0 LOFB0 false L0 false false false))
+(define G4 (make-game S2 (list W4) LOF1 3 0 0 LOFB0 false L0 false false false))
+(define G5 (make-game S0 LOW0 LOF0 3 0 0 LOFB2 false L0 false false false))
+(define G7 (make-game S0 LOW0 LOF0 3 0 0 LOFB3 false L0 false false false))
+(define G8 (make-game S1 LOW1 LOF1 2 0 0 LOFB3 false L0 false false false))
+(define G10 (make-game S0 LOW0 LOF10 3 0 0 LOFB0 false L0 false false false))
 #;
 (define (fn-for-game g)
   (... (fn-for-spider (game-spider g))
@@ -271,7 +271,8 @@
        (fn-for-extra-life-ball (game-extra-life-ball g))
        (game-lava g)
        (game-gameover g)
-       (game-retry g)))
+       (game-retry g)
+       (game-paused g)))
 
 
 ;; =================
@@ -294,31 +295,45 @@
                                    (list (make-web X-POS (+ 10 Y-SPEED) (+ 10 Y-SPEED)))
                                    (map move-fly LOF1)
                                    2 0 0 (tock-fireballs G8) false (tock-lava (game-lava G8))
-                                   false false))
+                                   false false false))
 (define (tock g)
-  (if (gameover? g)
+  (if (game-paused g)
       (make-game (game-spider g)
                  (game-webs g)
                  (game-flies g)
                  (game-lives g)
                  (game-level g)
                  (game-score g)
-                 (tock-fireballs g)
-                 (tock-extra-life-ball g (game-score g))
+                 (game-fireballs g)
+                 (game-extra-life-ball g)
                  (tock-lava (game-lava g))
-                 (tock-gameover (game-gameover g))
-                 (tock-retry g))
-      (local [(define new-score (tock-score g))]
-        (make-game (tock-spider g)
-                   (tock-webs g)
-                   (tock-flies g)
-                   (tock-lives g)
-                   (tock-level g)
-                   new-score
-                   (tock-fireballs g)
-                   (tock-extra-life-ball g new-score)
-                   (tock-lava (game-lava g))
-                   false false))))
+                 (game-gameover g)
+                 (game-retry g)
+                 (game-paused g))
+      (if (gameover? g)
+          (make-game (game-spider g)
+                     (game-webs g)
+                     (game-flies g)
+                     (game-lives g)
+                     (game-level g)
+                     (game-score g)
+                     (tock-fireballs g)
+                     (tock-extra-life-ball g (game-score g))
+                     (tock-lava (game-lava g))
+                     (tock-gameover (game-gameover g))
+                     (tock-retry g)
+                     (game-paused g))
+          (local [(define new-score (tock-score g))]
+            (make-game (tock-spider g)
+                       (tock-webs g)
+                       (tock-flies g)
+                       (tock-lives g)
+                       (tock-level g)
+                       new-score
+                       (tock-fireballs g)
+                       (tock-extra-life-ball g new-score)
+                       (tock-lava (game-lava g))
+                       false false false)))))
 
 ;; Game -> Spider
 ;; produce the next spider
@@ -554,9 +569,9 @@
 ;; Game -> Boolean
 ;; see if retry sign should be placed on screen
 (check-expect (tock-retry G0) false)
-(check-expect (tock-retry (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 400 false)) false)
-(check-expect (tock-retry (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 200 false)) true)
-(check-expect (tock-retry (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 600 false)) false)
+(check-expect (tock-retry (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 400 false false)) false)
+(check-expect (tock-retry (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 200 false false)) true)
+(check-expect (tock-retry (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 600 false false)) false)
 (define (tock-retry g)
   (if (and (gameover? g) (not (false? (game-gameover g))))
       (<= (game-gameover g) 224)
@@ -638,7 +653,8 @@
                                                                                   (render-fireballs (game-fireballs g)
                                                                                                     (render-extra-life-ball (game-extra-life-ball g)
                                                                                                                             (render-flies (game-flies g)
-                                                                                                                                          (render-lava (game-lava g)))))))))))]
+                                                                                                                                          (render-paused (game-paused g)
+                                                                                                                                                         (render-lava (game-lava g))))))))))))]
     (if (gameover? g)
         (if (false? (game-gameover g))
             (place-image GAMEOVER
@@ -900,6 +916,16 @@
                    347
                    i)))
 
+;; Boolean Image -> Image
+;; render paused message onto scene
+(define (render-paused p i)
+  (if (false? p)
+      i
+      (place-image (txt-to-image "PAUSED")
+                   (/ WIDTH 2)
+                   250
+                   i)))
+
 
 ;; Game KeyEvent -> Game
 ;; if space bar is pressed bring spider to top of screen and right 10 pixels
@@ -911,7 +937,7 @@
                          (list (make-web X-POS 0 0))
                          (game-flies G0)
                          3 0 0 LOFB0 false L0
-                         false false))
+                         false false false))
 (check-expect (handle-key G0 "left")
               (make-game (make-spider (- X-POS (+ X-SPEED (game-level G0)))
                                       (spider-y (game-spider G0))
@@ -922,7 +948,7 @@
                                (game-webs G0))
                          (game-flies G0)
                          3 0 0 LOFB0 false L0
-                         false false))
+                         false false false))
 (check-expect (handle-key G0 "right")
               (make-game (make-spider (+ X-POS (+ X-SPEED (game-level G0)))
                                       (spider-y (game-spider G0))
@@ -933,105 +959,140 @@
                                (game-webs G0))
                          (game-flies G0)
                          3 0 0 LOFB0 false L0
-                         false false))
+                         false false false))
 ;(define (handle-key g ke) g)   ;stub
 
 (define (handle-key g ke)
-  (cond [(and (key=? ke " ")
-              (not (false? (game-retry g))))
-         (make-game (make-spider (spider-x (game-spider g))
-                                 0
-                                 (spider-rot (game-spider g)))
-                    (list (make-web (spider-x (game-spider g))
-                                    0 0))
-                    (game-flies g)
-                    3
-                    0
-                    0
-                    (game-fireballs g)
-                    false
-                    (game-lava g)
-                    false
-                    false)]
-        [(and (key=? ke "up") (gameover? g))
-         (make-game (make-spider (spider-x (game-spider g))
-                                 (modulo (- (spider-y (game-spider g)) X-SPEED) HEIGHT)
-                                 (spider-rot (game-spider g)))
-                    (game-webs g)
-                    (game-flies g)
-                    (game-lives g)
-                    (game-level g)
-                    (game-score g)
-                    (game-fireballs g)
-                    (game-extra-life-ball g)
-                    (game-lava g)
-                    (game-gameover g)
-                    (game-retry g))]
-        [(and (key=? ke "down") (gameover? g))
-         (make-game (make-spider (spider-x (game-spider g))
-                                 (modulo (+ (spider-y (game-spider g)) X-SPEED) HEIGHT)
-                                 (spider-rot (game-spider g)))
-                    (game-webs g)
-                    (game-flies g)
-                    (game-lives g)
-                    (game-level g)
-                    (game-score g)
-                    (game-fireballs g)
-                    (game-extra-life-ball g)
-                    (game-lava g)
-                    (game-gameover g)
-                    (game-retry g))]
-        [(and (key=? ke " ") (not (gameover? g)))
-         (make-game (make-spider (spider-x (game-spider g))
-                                 0
-                                 (spider-rot (game-spider g)))
-                    (list (make-web (spider-x (game-spider g))
-                                    0
-                                    0))
-                    (game-flies g)
-                    (game-lives g)
-                    (game-level g)
-                    (game-score g)
-                    (game-fireballs g)
-                    (game-extra-life-ball g)
-                    (game-lava g)
-                    (game-gameover g)
-                    (game-retry g))]
-        [(key=? ke "left")
-         (make-game (make-spider (modulo (- (spider-x (game-spider g)) (+ X-SPEED (game-level g))) WIDTH)
-                                 (spider-y (game-spider g))
-                                 (spider-rot (game-spider g)))
-                    (cons (make-web (modulo (- (spider-x (game-spider g)) (+ X-SPEED (game-level g))) WIDTH)
-                                    (spider-y (game-spider g))
-                                    0)
-                          (game-webs g))
-                    (game-flies g)
-                    (game-lives g)
-                    (game-level g)
-                    (game-score g)
-                    (game-fireballs g)
-                    (game-extra-life-ball g)
-                    (game-lava g)
-                    (game-gameover g)
-                    (game-retry g))]
-        [(key=? ke "right")
-         (make-game (make-spider (modulo (+ (spider-x (game-spider g)) (+ X-SPEED (game-level g))) WIDTH)
-                                 (spider-y (game-spider g))
-                                 (spider-rot (game-spider g)))
-                    (cons (make-web (modulo (+ (spider-x (game-spider g)) (+ X-SPEED (game-level g))) WIDTH)
-                                    (spider-y (game-spider g))
-                                    0)
-                          (game-webs g))
-                    (game-flies g)
-                    (game-lives g)
-                    (game-level g)
-                    (game-score g)
-                    (game-fireballs g)
-                    (game-extra-life-ball g)
-                    (game-lava g)
-                    (game-gameover g)
-                    (game-retry g))]
-        [else g]))
+  (if (game-paused g)
+      (if (key=? ke "p")
+          (make-game (game-spider g)
+                     (game-webs g)
+                     (game-flies g)
+                     (game-lives g)
+                     (game-level g)
+                     (game-score g)
+                     (game-fireballs g)
+                     (game-extra-life-ball g)
+                     (game-lava g)
+                     (game-gameover g)
+                     (game-retry g)
+                     false)
+          g)
+      (cond [(and (key=? ke " ")
+                  (not (false? (game-retry g))))
+             (make-game (make-spider (spider-x (game-spider g))
+                                     0
+                                     (spider-rot (game-spider g)))
+                        (list (make-web (spider-x (game-spider g))
+                                        0 0))
+                        (game-flies g)
+                        3
+                        0
+                        0
+                        (game-fireballs g)
+                        false
+                        (game-lava g)
+                        false
+                        false
+                        false)]
+            [(and (key=? ke "up") (gameover? g))
+             (make-game (make-spider (spider-x (game-spider g))
+                                     (modulo (- (spider-y (game-spider g)) X-SPEED) HEIGHT)
+                                     (spider-rot (game-spider g)))
+                        (game-webs g)
+                        (game-flies g)
+                        (game-lives g)
+                        (game-level g)
+                        (game-score g)
+                        (game-fireballs g)
+                        (game-extra-life-ball g)
+                        (game-lava g)
+                        (game-gameover g)
+                        (game-retry g)
+                        (game-paused g))]
+            [(and (key=? ke "down") (gameover? g))
+             (make-game (make-spider (spider-x (game-spider g))
+                                     (modulo (+ (spider-y (game-spider g)) X-SPEED) HEIGHT)
+                                     (spider-rot (game-spider g)))
+                        (game-webs g)
+                        (game-flies g)
+                        (game-lives g)
+                        (game-level g)
+                        (game-score g)
+                        (game-fireballs g)
+                        (game-extra-life-ball g)
+                        (game-lava g)
+                        (game-gameover g)
+                        (game-retry g)
+                        (game-paused g))]
+            [(and (key=? ke " ") (not (gameover? g)))
+             (make-game (make-spider (spider-x (game-spider g))
+                                     0
+                                     (spider-rot (game-spider g)))
+                        (list (make-web (spider-x (game-spider g))
+                                        0
+                                        0))
+                        (game-flies g)
+                        (game-lives g)
+                        (game-level g)
+                        (game-score g)
+                        (game-fireballs g)
+                        (game-extra-life-ball g)
+                        (game-lava g)
+                        (game-gameover g)
+                        (game-retry g)
+                        (game-paused g))]
+            [(key=? ke "left")
+             (make-game (make-spider (modulo (- (spider-x (game-spider g)) (+ X-SPEED (game-level g))) WIDTH)
+                                     (spider-y (game-spider g))
+                                     (spider-rot (game-spider g)))
+                        (cons (make-web (modulo (- (spider-x (game-spider g)) (+ X-SPEED (game-level g))) WIDTH)
+                                        (spider-y (game-spider g))
+                                        0)
+                              (game-webs g))
+                        (game-flies g)
+                        (game-lives g)
+                        (game-level g)
+                        (game-score g)
+                        (game-fireballs g)
+                        (game-extra-life-ball g)
+                        (game-lava g)
+                        (game-gameover g)
+                        (game-retry g)
+                        (game-paused g))]
+            [(key=? ke "right")
+             (make-game (make-spider (modulo (+ (spider-x (game-spider g)) (+ X-SPEED (game-level g))) WIDTH)
+                                     (spider-y (game-spider g))
+                                     (spider-rot (game-spider g)))
+                        (cons (make-web (modulo (+ (spider-x (game-spider g)) (+ X-SPEED (game-level g))) WIDTH)
+                                        (spider-y (game-spider g))
+                                        0)
+                              (game-webs g))
+                        (game-flies g)
+                        (game-lives g)
+                        (game-level g)
+                        (game-score g)
+                        (game-fireballs g)
+                        (game-extra-life-ball g)
+                        (game-lava g)
+                        (game-gameover g)
+                        (game-retry g)
+                        (game-paused g))]
+            [(key=? ke "p")
+             (make-game (game-spider g)
+                        (game-webs g)
+                        (game-flies g)
+                        (game-lives g)
+                        (game-level g)
+                        (game-score g)
+                        (game-fireballs g)
+                        (game-extra-life-ball g)
+                        (game-lava g)
+                        (game-gameover g)
+                        (game-retry g)
+                        true)]
+                    
+            [else g])))
 
 ;; Game Integer Integer MouseEvent -> Game
 ;; restart game when user clicks retry button
@@ -1039,36 +1100,39 @@
 (check-expect (handle-mouse G10 240 375 "button-down") G10)
 (check-expect (handle-mouse G10 200 300 "button-down") G10)
 (check-expect (handle-mouse G10 240 375 "drag") G10)
-(check-expect (handle-mouse (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 300 false) 240 375 "button-down")
-              (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 300 false))
-(check-expect (handle-mouse (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 200 false) 240 375 "button-down")
-              (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 200 false))
-(check-expect (handle-mouse (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 200 true) 200 300 "button-down")
-              (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 200 true))
-(check-expect (handle-mouse (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 200 true) 240 375 "button-down")
-              (make-game (make-spider 250 0 10) LOW0 LOF0 3 0 0 LOFB0 false L0 false false))
+(check-expect (handle-mouse (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 300 false false) 240 375 "button-down")
+              (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 300 false false))
+(check-expect (handle-mouse (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 200 false false) 240 375 "button-down")
+              (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 200 false false))
+(check-expect (handle-mouse (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 200 true false) 200 300 "button-down")
+              (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 200 true false))
+(check-expect (handle-mouse (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 200 true false) 240 375 "button-down")
+              (make-game (make-spider 250 0 10) LOW0 LOF0 3 0 0 LOFB0 false L0 false false false))
 ;(define (handle-mouse g x y me) g)   ;stub
 
 (define (handle-mouse g x y me)
-  (cond [(and (mouse=? me "button-down")
-              (not (false? (game-retry g)))
-              (< (- (/ WIDTH 2) 100) x (+ (/ WIDTH 2) 100))
-              (< (- 378 40) y (+ 378 40)))
-         (make-game (make-spider (spider-x (game-spider g))
-                                 0
-                                 (spider-rot (game-spider g)))
-                    (list (make-web (spider-x (game-spider g))
-                                    0 0))
-                    (game-flies g)
-                    3
-                    0
-                    0
-                    (game-fireballs g)
-                    false
-                    (game-lava g)
-                    false
-                    false)]
-        [else g]))
+  (if (game-paused g)
+      g
+      (cond [(and (mouse=? me "button-down")
+                  (not (false? (game-retry g)))
+                  (< (- (/ WIDTH 2) 100) x (+ (/ WIDTH 2) 100))
+                  (< (- 378 40) y (+ 378 40)))
+             (make-game (make-spider (spider-x (game-spider g))
+                                     0
+                                     (spider-rot (game-spider g)))
+                        (list (make-web (spider-x (game-spider g))
+                                        0 0))
+                        (game-flies g)
+                        3
+                        0
+                        0
+                        (game-fireballs g)
+                        false
+                        (game-lava g)
+                        false
+                        false
+                        false)]
+            [else g])))
 
 
 ;; String -> Image
@@ -1079,7 +1143,7 @@
   (text s TEXT-SIZE TEXT-COLOUR))
 
 ;; Game -> Boolean
-(define G6 (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 false false))
+(define G6 (make-game S1 LOW1 LOF0 0 0 300 LOFB0 false L0 false false false))
 (check-expect (gameover? G0) false)
 (check-expect (gameover? G1) false)
 (check-expect (gameover? G6) true)
