@@ -646,6 +646,7 @@
 (define (render g)
   (local [(define (render-gameon g)
             (render-webs (game-webs g)
+                         (game-spider g)
                          (render-spider (game-spider g)
                                         (render-lives (game-lives g)
                                                       (render-level (game-level g)
@@ -671,49 +672,13 @@
 
 ;; ListOfWeb Image -> Image
 ;; render webs onto image
-(check-expect (render-webs LOW0 MTS)
-              (place-image/align (rectangle 1 0 "solid" "gray")
-                                 X-POS
-                                 0
-                                 "middle"
-                                 "bottom"
-                                 MTS))
-(check-expect (render-webs LOW1 MTS)
-              (place-image/align (rectangle 1 10 "solid" "gray")
-                                 X-POS
-                                 10
-                                 "middle"
-                                 "bottom"
-                                 MTS))
-(define (render-webs low i)
+(define (render-webs low spider i)
   (cond [(empty? low) i]
         [else
-         (render-web (first low)
-                     (render-webs (rest low) i))]))
-
-;; Web Image -> Image
-;; render image of web onto image
-(check-expect (render-web W0 MTS)
-              (place-image/align (rectangle 1 0 "solid" "gray")
-                                 X-POS
-                                 0
-                                 "middle"
-                                 "bottom"
-                                 MTS))
-(check-expect (render-web W1 MTS)
-              (place-image/align (rectangle 1 10 "solid" "gray")
-                                 X-POS
-                                 10
-                                 "middle"
-                                 "bottom"
-                                 MTS))
-(define (render-web w i)
-  (place-image/align (rectangle 1 (web-length w) "solid" "gray")
-                     (web-x w)
-                     (web-y w)
-                     "middle"
-                     "bottom"
-                     i))
+         (add-curve i
+                    (spider-x spider) (spider-y spider) 90 1/3
+                    (web-x (first (reverse low))) 0 90 1/3
+                    "white")]))
 
 ;; Spider Image -> Image
 ;; render image of spider onto image
