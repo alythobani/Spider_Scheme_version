@@ -20,6 +20,7 @@
 (define FIREBALL-SPEED 5)        ;the lower the easier (changes speed of fireballs)
 (define FIREBALL-SEPARATION 75)  ;the higher the easier (changes # of fireballs)
 (define Y-SPEED 5)               ;the lower the easier (changes speed of falling spider)
+(define EXTRA-LIFE-BALL-SPEED 5) ;the lower the easier (changes speed of extra life ball)
 
 
 ;; =================
@@ -534,7 +535,7 @@
             (make-extra-life-ball WIDTH (random HEIGHT))
             false)
         (local [(define new-x (- (extra-life-ball-x (game-extra-life-ball g))
-                                 (+ FIREBALL-SPEED (game-level g))))
+                                 EXTRA-LIFE-BALL-SPEED))
                 (define (hit? ball)
                   (and
                    (<= (- (spider-x (game-spider g)) 19)
